@@ -22,13 +22,13 @@ class Observations {
    * Fetches cedar data from iNat API and stores it in this.rawObs
    */
   constructor() {
-    const per_page = 20
+    const per_page = 20 // pulls 20 observations per page
 
     var page = 1
     var observations = []
 
     do {
-      // this is a note // 
+
       var url = 
         'https://api.inaturalist.org/v1/observations?project_id=western-redcedar-dieback-map&page=' +
         page + '&' + per_page + '=20&order=desc&order_by=created_at'
@@ -40,10 +40,10 @@ class Observations {
 
       page++
 
-    } while ((page * per_page) < page_observations.total_results)
+    } while ((page * per_page) < page_observations.total_results) // do while - loop function - determines how many observations in total, then determines how many time to loop
 
     this.count = page_observations.total_results
-    this.rawObs = observations
+    this.rawObs = observations //stores observations 
 
     //this.rawObs = this.rawObs.slice(0,5)
   }
@@ -53,17 +53,17 @@ class Observations {
    */
   parse() {
 
-    Logger.log("Parsing observations")
+    Logger.log("Parsing observations") //runs for each observations
 
-    this.simpleObs = []
+    this.simpleObs = [] 
 
     for (var i in this.rawObs) {
 
-      var ob = this.rawObs[i]
-      var sob = {}
+      var ob = this.rawObs[i] // ob is the json for a single observation
+      var sob = {}  // sob = simplified observations - take a subset and reconfigure because its json and you need it in sheets. Field titles need to be changed a little, structure altered slightly. 
 
       // missing fields
-      // private_place_guess, private_latitude, private_longitude, place_town_name, place_county_name, place_state_name, place_country_name, place_admin1_name, place_admin2_name
+      // private_place_guess, private_latitude, private_longitude, place_town_name, place_county_name, place_state_name, place_country_name, place_admin1_name, place_admin2_name**
 
       var fields = ['id', 'observed_on_string', 'observed_on', 
         'time_observed_at', 'observed_time_zone','created_at',
@@ -72,9 +72,11 @@ class Observations {
         'num_identification_disagreements', 'captive', 'oauth_application_id', 
         'place_guess', 'geojson/coordinates/1', 'geojson/coordinates/0',
         'positional_accuracy', 'geoprivacy', 'public_positional_accuracy', 
-        'taxon_geoprivacy', 'coordinates_obscured', 'positioning_method', 'positioning_device']
+        'taxon_geoprivacy', 'coordinates_obscured', 'positioning_method', 'positioning_device','place_admin1_name']
 
-      // add ofvs fields
+// **added 'place_admin1_name', previously listed in missing fields above - doesn't seem to have worked though, which may be why tyler had listed it in missing fields.
+
+      // add ofvs fields  --- change i value when you add questions. When you go into to the all fields - check out how many ofvs fields there are. 
       for (i=0; i<=14; i++) {
         fields.push('ofvs/' + i + '/name')
         fields.push('ofvs/' + i + '/value')
@@ -87,9 +89,9 @@ class Observations {
 
       this.organize_ofvs(sob)
 
-      // deal with photo urls
-      if (sob.photos.hasOwnProperty(0)) { 
-        sob.photos[0].url = sob.photos[0].url.replace("square", "original")
+      // deal with photo urls 
+      if (sob.photos.hasOwnProperty(0)) { //checks that observation has a photo - if photos property has anything it. if this condition is true, then do everything inside the brackets
+        sob.photos[0].url = sob.photos[0].url.replace("square", "original")  //hack to change urls to higher quality
       }
         
       this.simpleObs.push(sob)
@@ -100,7 +102,7 @@ class Observations {
   /**
    * Reorganizes the ofvs section of a observation object (unordered array -> object) in place
    */
-  organize_ofvs(ob) {
+  organize_ofvs(ob) {  //changes json ofvs to properties then organizes them based on field name. 
 
     var new_ofvs = {}
 
@@ -119,7 +121,7 @@ class Observations {
    * Flattens each object in array of objects so that they can be made into an table
    */
   flattenObservations(obs) {
-    Logger.log("Flattening observations...")
+    Logger.log("Flattening observations...") //converts json into sheet format with ofvs, uses flatten helper functions below
 
     var flat_obs = []
 
@@ -132,9 +134,9 @@ class Observations {
   }
 
   /**
-   * Converts observations to array, returns result
+   * Converts observations to array, returns result 
    */
-  makeArr(obs) {
+  makeArr(obs) { // data has to be a matrix to turn it into a google sheet. 
 
     obs = this.flattenObservations(obs)
 
@@ -172,11 +174,11 @@ class Observations {
    * Clears the given sheet, then copies simpleObsArr into it.
    * @param {String} data_type
    */
-  toSheet(sheet, ob_type, row_count=null) {
+  toSheet(sheet, ob_type, row_count=null) { //clears 
 
     var obs = this.simpleObs
     
-    if (ob_type == 'r') {
+    if (ob_type == 'r') {  //r stands for raw - 
       obs = this.rawObs
     }
 
@@ -220,7 +222,7 @@ function iNatToSheet() {
 }
 
 
-/**
+/** Helper functions
  * Copies field from one object to another. Field may be a path instead of a simple key.
  * @param {Object} source_ob  source object for copy
  * @param {Object} target_ob  target object for copy
