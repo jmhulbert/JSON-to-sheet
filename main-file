@@ -5,15 +5,15 @@
   Version:      1.0
   Project Page: ####
   Copyright:    (c) 2021 by Tyler Sheldon
-  License:      GNU General Public License, version 3 (GPL-3.0) 
+  License:      GNU General Public License, version 3 (GPL-3.0)
                 http://www.opensource.org/licenses/gpl-3.0.html
   -----------------------------------------------------------------------------------------------------------
-  A script for importing iNat JSON feeds into Google spreadsheets. 
+  A script for importing iNat JSON feeds into Google spreadsheets.
   -----------------------------------------------------------------------------------------------------------
   Changelog:
 
   1.0    Initial release
-  
+  1.1    Reduced number of parsed columns - 4/11/2021
  *==========================================================================================================*/
 
 class Observations {
@@ -29,7 +29,7 @@ class Observations {
 
     do {
 
-      var url = 
+      var url =
         'https://api.inaturalist.org/v1/observations?project_id=western-redcedar-dieback-map&page=' +
         page + '&' + per_page + '=20&order=desc&order_by=created_at'
 
@@ -43,7 +43,7 @@ class Observations {
     } while ((page * per_page) < page_observations.total_results) // do while - loop function - determines how many observations in total, then determines how many time to loop
 
     this.count = page_observations.total_results
-    this.rawObs = observations //stores observations 
+    this.rawObs = observations //stores observations
 
     //this.rawObs = this.rawObs.slice(0,5)
   }
@@ -55,28 +55,31 @@ class Observations {
 
     Logger.log("Parsing observations") //runs for each observations
 
-    this.simpleObs = [] 
+    this.simpleObs = []
 
     for (var i in this.rawObs) {
 
       var ob = this.rawObs[i] // ob is the json for a single observation
-      var sob = {}  // sob = simplified observations - take a subset and reconfigure because its json and you need it in sheets. Field titles need to be changed a little, structure altered slightly. 
+      var sob = {}  // sob = simplified observations - take a subset and reconfigure because its json and you need it in sheets. Field titles need to be changed a little, structure altered slightly.
 
       // missing fields
       // private_place_guess, private_latitude, private_longitude, place_town_name, place_county_name, place_state_name, place_country_name, place_admin1_name, place_admin2_name**
 
-      var fields = ['id', 'observed_on_string', 'observed_on', 
+      var fields = ['id', 'observed_on_string', 'observed_on',
         'time_observed_at', 'observed_time_zone','created_at',
-        'updated_at', 'quality_grade', 'license_code', 'uri', 'user/id',
-        'user/login', 'photos/0/url', 'description', 'num_identification_agreements',
-        'num_identification_disagreements', 'captive', 'oauth_application_id', 
+        'updated_at', 'quality_grade',  'uri',
+        'user/login', 'photos/0/url', 'description',
         'place_guess', 'geojson/coordinates/1', 'geojson/coordinates/0',
-        'positional_accuracy', 'geoprivacy', 'public_positional_accuracy', 
+        'positional_accuracy', 'geoprivacy', 'public_positional_accuracy',
         'taxon_geoprivacy', 'coordinates_obscured', 'positioning_method', 'positioning_device','place_admin1_name']
+
+// removed fields in version 1.1:  'num_identification_agreements', 'num_identification_disagreements', 'captive', 'oauth_application_id', 'license_code', 'user/id',
 
 // **added 'place_admin1_name', previously listed in missing fields above - doesn't seem to have worked though, which may be why tyler had listed it in missing fields.
 
-      // add ofvs fields  --- change i value when you add questions. When you go into to the all fields - check out how many ofvs fields there are. 
+
+
+      // add ofvs fields  --- change i value when you add questions. When you go into to the all fields - check out how many ofvs fields there are.
       for (i=0; i<=14; i++) {
         fields.push('ofvs/' + i + '/name')
         fields.push('ofvs/' + i + '/value')
@@ -89,11 +92,11 @@ class Observations {
 
       this.organize_ofvs(sob)
 
-      // deal with photo urls 
+      // deal with photo urls
       if (sob.photos.hasOwnProperty(0)) { //checks that observation has a photo - if photos property has anything it. if this condition is true, then do everything inside the brackets
         sob.photos[0].url = sob.photos[0].url.replace("square", "original")  //hack to change urls to higher quality
       }
-        
+
       this.simpleObs.push(sob)
 
     }
@@ -102,11 +105,11 @@ class Observations {
   /**
    * Reorganizes the ofvs section of a observation object (unordered array -> object) in place
    */
-  organize_ofvs(ob) {  //changes json ofvs to properties then organizes them based on field name. 
+  organize_ofvs(ob) {  //changes json ofvs to properties then organizes them based on field name.
 
     var new_ofvs = {}
 
-    for (var i in ob.ofvs) { 
+    for (var i in ob.ofvs) {
       var name = ob.ofvs[i].name
       var value = ob.ofvs[i].value
 
@@ -134,9 +137,9 @@ class Observations {
   }
 
   /**
-   * Converts observations to array, returns result 
+   * Converts observations to array, returns result
    */
-  makeArr(obs) { // data has to be a matrix to turn it into a google sheet. 
+  makeArr(obs) { // data has to be a matrix to turn it into a google sheet.
 
     obs = this.flattenObservations(obs)
 
@@ -155,7 +158,7 @@ class Observations {
       for (var j=0; j<headers.length; j++) {
 
         var field = headers[j]
-        
+
         if (field in observation) {
           row.push(observation[field])
         } else {
@@ -174,11 +177,11 @@ class Observations {
    * Clears the given sheet, then copies simpleObsArr into it.
    * @param {String} data_type
    */
-  toSheet(sheet, ob_type, row_count=null) { //clears 
+  toSheet(sheet, ob_type, row_count=null) { //clears
 
     var obs = this.simpleObs
-    
-    if (ob_type == 'r') {  //r stands for raw - 
+
+    if (ob_type == 'r') {  //r stands for raw -
       obs = this.rawObs
     }
 
@@ -198,10 +201,10 @@ class Observations {
 
 /**
  * Main function
- * 
+ *
  * For more information on using the Spreadsheet API, see
  * https://developers.google.com/apps-script/service_spreadsheet
- * 
+ *
  */
 function iNatToSheet() {
   const ss_url = 'https://docs.google.com/spreadsheets/d/1-LMnxaUw-8lgQ1dnCCUGIzeEVzx1g6BsaX8N1-Ja5C0/edit'
@@ -240,7 +243,7 @@ function copyField(source_ob, target_ob, field_path) {
 
       // if field_path is just one property..
       if (field_path_arr.length === 1) {
-        target_ob[f0] = source_ob[f0] 
+        target_ob[f0] = source_ob[f0]
 
       } // else field_path is an extended path.
       else {
@@ -253,8 +256,8 @@ function copyField(source_ob, target_ob, field_path) {
 
         // recurse
         copyField(source_ob[f0], target_ob[f0], truncated_path)
-      } 
-  }  
+      }
+  }
   // if key isn't in the source ob, do nothing
 
   }
@@ -263,7 +266,7 @@ function copyField(source_ob, target_ob, field_path) {
 
 /**
  * Wrapper function for flattenTree2
- */ 
+ */
 function flattenTree(obj) {
   return flattenTree2('', obj)
 }
@@ -280,7 +283,7 @@ function flattenTree2(path_prefix, obj) {
   var flatTree = {}
 
   for (const field in obj) {
-    
+
     // if it's an object..
     if (typeof obj[field] === 'object' && obj[field] !== null) {
 
@@ -319,4 +322,3 @@ function getKeys(arr) {
   }
   return all_keys
 }
-
